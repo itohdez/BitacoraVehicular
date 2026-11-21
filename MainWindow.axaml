@@ -1,0 +1,94 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:models="using:BitacoraVehicular.Models"
+        x:Class="BitacoraVehicular.MainWindow"
+        Title="Bitácora de Mantenimiento Vehicular"
+        Width="880" Height="640"
+        MinWidth="800" MinHeight="600"
+        WindowStartupLocation="CenterScreen">
+
+    <Grid RowDefinitions="Auto,*,Auto" Margin="16">
+        <!-- Encabezado -->
+        <StackPanel Grid.Row="0" Margin="0,0,0,12">
+            <TextBlock Text="Bitácora de Mantenimiento Vehicular"
+                       FontSize="22" FontWeight="Bold" />
+            <TextBlock Text="Registro y control de servicios con Avalonia UI + ADO.NET (SQLite)"
+                       FontSize="12" Opacity="0.7" />
+        </StackPanel>
+
+        <!-- Cuerpo principal: Formulario (izq) + Lista (der) -->
+        <Grid Grid.Row="1" ColumnDefinitions="330,*" ColumnSpacing="16">
+
+            <!-- Panel izquierdo: Formulario -->
+            <Border Grid.Column="0" BorderBrush="#666666" BorderThickness="1" CornerRadius="6" Padding="14">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <StackPanel Spacing="8">
+                        <TextBlock Text="Datos del Mantenimiento" FontWeight="SemiBold" FontSize="15" Margin="0,0,0,4"/>
+
+                        <TextBlock Text="Fecha (AAAA-MM-DD):" FontSize="12"/>
+                        <TextBox x:Name="TxtFecha" PlaceholderText="Ej: 2026-11-20"/>
+
+                        <TextBlock Text="Tipo de servicio:" FontSize="12"/>
+                        <ComboBox x:Name="CmbTipo" HorizontalAlignment="Stretch" SelectedIndex="0">
+                            <ComboBoxItem Content="Preventivo"/>
+                            <ComboBoxItem Content="Correctivo"/>
+                            <ComboBoxItem Content="Revisión General"/>
+                        </ComboBox>
+
+                        <TextBlock Text="Descripción:" FontSize="12"/>
+                        <TextBox x:Name="TxtDescripcion" PlaceholderText="Ej: Cambio de aceite y filtro"/>
+
+                        <TextBlock Text="Kilometraje (km):" FontSize="12"/>
+                        <TextBox x:Name="TxtKilometraje" PlaceholderText="Ej: 125000"/>
+
+                        <TextBlock Text="Costo ($):" FontSize="12"/>
+                        <TextBox x:Name="TxtCosto" PlaceholderText="Ej: 180000"/>
+
+                        <!-- Botones CRUD -->
+                        <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto" ColumnSpacing="8" RowSpacing="8" Margin="0,12,0,0">
+                            <Button Grid.Row="0" Grid.Column="0" Content="Guardar"
+                                    HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
+                                    Click="BtnGuardar_Click"/>
+                            <Button Grid.Row="0" Grid.Column="1" Content="Actualizar"
+                                    HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
+                                    Click="BtnActualizar_Click"/>
+                            <Button Grid.Row="1" Grid.Column="0" Content="Eliminar"
+                                    HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
+                                    Click="BtnEliminar_Click"/>
+                            <Button Grid.Row="1" Grid.Column="1" Content="Limpiar"
+                                    HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
+                                    Click="BtnLimpiar_Click"/>
+                        </Grid>
+                    </StackPanel>
+                </ScrollViewer>
+            </Border>
+
+            <!-- Panel derecho: Listado de registros -->
+            <Border Grid.Column="1" BorderBrush="#666666" BorderThickness="1" CornerRadius="6" Padding="14">
+                <Grid RowDefinitions="Auto,*">
+                    <TextBlock Grid.Row="0" Text="Historial registrado (haz clic en uno para editar o eliminar)"
+                               FontWeight="SemiBold" FontSize="14" Margin="0,0,0,8"/>
+
+                    <ListBox Grid.Row="1" x:Name="LstMantenimientos" SelectionChanged="LstMantenimientos_SelectionChanged">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate x:DataType="models:Mantenimiento">
+                                <StackPanel Margin="4">
+                                    <TextBlock Text="{Binding Descripcion}" FontWeight="Bold" FontSize="14"/>
+                                    <TextBlock Text="{Binding DetalleResumen}" FontSize="12" Opacity="0.75"/>
+                                </StackPanel>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </Grid>
+            </Border>
+        </Grid>
+
+        <!-- Barra de estado / Mensajes -->
+        <Border Grid.Row="2" Margin="0,12,0,0" Padding="10" CornerRadius="4" Background="#F3F3F3">
+            <TextBlock x:Name="TxtMensaje"
+                       Text="Listo. Ingresa un nuevo registro o selecciona uno de la lista."
+                       Foreground="#222222"
+                       FontWeight="Medium"/>
+        </Border>
+    </Grid>
+</Window>
