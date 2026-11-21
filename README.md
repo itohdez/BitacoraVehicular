@@ -48,13 +48,69 @@ BitacoraVehicular/
 └── README.md                      # Documentación técnica
 ```
 
-### Clases principales y aplicación de POO
+### Diagrama de clases (UML)
 
-- **`Mantenimiento` (`Models/`):** Representa cada registro de servicio. Aplica **encapsulamiento** mediante propiedades, **sobrecarga de constructores** (vacío y parametrizado) y una propiedad calculada (`DetalleResumen`) para formatear la salida en la interfaz.
-- **`ConexionBD` (`Data/`):** Encapsula la cadena de conexión (`private readonly`) y garantiza la creación automática de la base de datos y la tabla.
-- **`MantenimientoDAO` (`Data/`):** Centraliza el acceso a datos mediante ADO.NET. Recibe `ConexionBD` por constructor y ejecuta las sentencias SQL parametrizadas.
-- **`MantenimientoServicio` (`Services/`):** Contiene la lógica de validación para asegurar que ningún dato inválido llegue a la base de datos.
-- **`MainWindow` (`MainWindow.axaml.cs`):** Gestiona únicamente los eventos de la interfaz gráfica (`Click`, `SelectionChanged`) y delega toda operación a `MantenimientoServicio`, manteniendo una separación clara de responsabilidades.
+```mermaid
+classDiagram
+    class MainWindow {
+        -MantenimientoServicio _servicio
+        -int? _idSeleccionado
+        +BtnGuardar_Click()
+        +BtnActualizar_Click()
+        +BtnEliminar_Click()
+        +CargarRegistros()
+    }
+    class MantenimientoServicio {
+        -MantenimientoDAO _dao
+        +Listar() List~Mantenimiento~
+        +Registrar(...)
+        +Modificar(...)
+        +Eliminar(int id)
+        -ValidarYConstruir(...) Mantenimiento
+    }
+    class MantenimientoDAO {
+        -ConexionBD _conexionBD
+        +Insertar(Mantenimiento m)
+        +ObtenerTodos() List~Mantenimiento~
+        +Actualizar(Mantenimiento m)
+        +Eliminar(int id)
+    }
+    class ConexionBD {
+        -string _cadenaConexion
+        +ObtenerConexion() SqliteConnection
+        -InicializarBaseDeDatos()
+    }
+    class Mantenimiento {
+        +int Id
+        +string Fecha
+        +string Tipo
+        +string Descripcion
+        +int Kilometraje
+        +decimal Costo
+        +string DetalleResumen
+    }
+
+    MainWindow --> MantenimientoServicio : delega acciones
+    MantenimientoServicio --> MantenimientoDAO : solicita persistencia
+    MantenimientoDAO --> ConexionBD : obtiene conexión
+    MantenimientoServicio ..> Mantenimiento : valida y construye
+    MantenimientoDAO ..> Mantenimiento : lee y guarda
+```
+
+### Clases principales, POO e integración entre capas
+
+- **`Mantenimiento` (`Models/`):** Representa cada servicio realizado al vehículo personal del usuario (se diseñó como entidad única enfocada en un solo vehículo para mantener el modelo claro y directo). Aplica **encapsulamiento** mediante propiedades, **sobrecarga de constructores** y una propiedad calculada (`DetalleResumen`).
+- **`ConexionBD` (`Data/`):** Encapsula la cadena de conexión (`private readonly`) y asegura la creación automática de la base de datos y la tabla.
+- **`MantenimientoDAO` (`Data/`):** Centraliza el acceso a datos con ADO.NET y consultas parametrizadas. No contiene lógica visual ni validaciones de formulario.
+- **`MantenimientoServicio` (`Services/`):** Implementa las reglas de negocio y validaciones antes de tocar la base de datos.
+- **`MainWindow` (`MainWindow.axaml.cs`):** Captura los eventos de Avalonia y actualiza la interfaz.
+
+**Ejemplo de flujo de integración (al presionar "Guardar"):**
+
+1. `MainWindow` captura el evento `BtnGuardar_Click` y envía los textos ingresados a `MantenimientoServicio.Registrar(...)`.
+2. `MantenimientoServicio` valida formato de fecha, campos obligatorios y rangos numéricos; si todo es válido, instancia un objeto `Mantenimiento`.
+3. `MantenimientoDAO.Insertar(...)` solicita una `SqliteConnection` a `ConexionBD`, arma el `SqliteCommand` con parámetros `@` y ejecuta `ExecuteNonQuery()`.
+4. `MainWindow` recarga la lista desde SQLite y muestra la notificación de confirmación (o atrapa la excepción y muestra el error en rojo sin cerrarse).
 
 ## 5. Instalación de dependencias
 
@@ -72,7 +128,7 @@ BitacoraVehicular/
 1. Clonar el repositorio desde GitHub:
 
    ```bash
-   git clone [https://github.com/itohdez/BitacoraVehicular.git](https://github.com/itohdez/BitacoraVehicular.git)
+   git clone https://github.com/itohdez/BitacoraVehicular.git
    ```
 
 2. Ingresar a la carpeta del proyecto:
@@ -152,7 +208,9 @@ Se cierra completamente la aplicación y se vuelve a ejecutar con `dotnet run`. 
 
 ## 9. Problemas encontrados y soluciones
 
-- **Problema 1 (Compiled Bindings en Avalonia 11):** Al enlazar las propiedades del modelo `Mantenimiento` dentro del `DataTemplate` del `ListBox` en `MainWindow.axaml`, el compilador arrojaba error porque Avalonia habilita los *Compiled Bindings* por defecto.
-  - **Solución:** Se declaró el espacio de nombres `xmlns:models="using:BitacoraVehicular.Models"` en la etiqueta `<Window>` y se agregó `x:DataType="models:Mantenimiento"` en el `DataTemplate`, permitiendo compilar con verificación de tipos.
-- **Problema 2 (Error `CS1733` en cadena interpolada):** Al definir la propiedad `DetalleResumen` en `Mantenimiento.cs`, un separador mal formateado provocó llaves vacías `{}` dentro de la interpolación de cadenas (`$"..."`), impidiendo la compilación.
-  - **Solución:** Se corrigieron los separadores por el carácter `|` estándar y el formato de moneda, eliminando los errores de sintaxis.
+- **Problema 1 (Advertencias `AVLN5001` por propiedades obsoletas en Avalonia):** Al compilar y ejecutar el proyecto en .NET 10, Avalonia reportó advertencias `AVLN5001` indicando que `TextBox.Watermark` está obsoleto.
+  - **Solución:** Se reemplazó `Watermark` por `PlaceholderText` en todos los controles `TextBox` de `MainWindow.axaml`, logrando una compilación limpia con 0 errores y 0 advertencias.
+- **Problema 2 (Recorte de controles y contraste en modo oscuro):** En la primera ejecución, el formulario quedaba cortado en la parte inferior ocultando los botones CRUD, y la barra de estado mostraba texto claro sobre fondo claro por el tema oscuro del sistema operativo.
+  - **Solución:** Se aumentó el tamaño de la ventana (`880x640`), se envolvió el formulario en un `ScrollViewer` para garantizar acceso a todos los controles y se fijó `Foreground="#222222"` en el `TextBlock` de mensajes para asegurar legibilidad en cualquier tema.
+- **Problema 3 (Compiled Bindings en `DataTemplate`):** Al enlazar las propiedades de `Mantenimiento` dentro del `ListBox`, Avalonia exige tipado explícito por tener *Compiled Bindings* activos por defecto.
+  - **Solución:** Se declaró `xmlns:models="using:BitacoraVehicular.Models"` y `x:DataType="models:Mantenimiento"` en el `DataTemplate` de `MainWindow.axaml`.
